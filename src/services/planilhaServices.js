@@ -12,4 +12,14 @@ function lerPlanilha() {
   return { headers, rows };
 }
 
-module.exports = { lerPlanilha };
+function salvarPlanilha(headers, rows) {
+  const wb = XLSX.utils.book_new();
+  const wsData = [headers, ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+  const filePath = path.join(__dirname, '..', 'uploads', 'motores.xlsx');
+  XLSX.writeFile(wb, filePath);
+}
+
+module.exports = { lerPlanilha, salvarPlanilha };
