@@ -31,7 +31,7 @@ router.post('/salvar', upload.single('foto'), async (req, res) => {
         );
         stream.end(req.file.buffer);
       });
-      editData.fotoUrl = result.secure_url;
+      editData.fotoURL = result.secure_url;
     }
 
     const { headers, rows } = lerPlanilha();
@@ -70,7 +70,7 @@ router.delete('/foto/:tag', async (req, res) => {
 
     const indiceFoto = headers.findIndex(h => ['fotoUrl', 'fotoURL', 'fotourl'].includes(h));
     if (indiceFoto === -1) {
-      return res.status(400).json({ message: 'Coluna fotoUrl não encontrada na planilha' });
+      return res.status(400).json({ message: 'Coluna fotoURL não encontrada na planilha' });
     }
 
     const urlFoto = rows[rowIndex][indiceFoto];
