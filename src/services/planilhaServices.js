@@ -9,7 +9,13 @@ function lerPlanilha() {
   const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
   const headers = data[0];
   const rows = data.slice(1);
-  return { headers, rows };
+
+   // <<< **ADICIONE ESSA VERIFICAÇÃO AQUI** para garantir que existe a coluna publicId
+  if (!headers.includes('publicId')) {
+    headers.push('publicId');
+    rows.forEach(row => row.push(''));
+  }
+  return { workbook, worksheet, data, filePath, headers, rows  };
 }
 
 function salvarPlanilha(headers, rows) {

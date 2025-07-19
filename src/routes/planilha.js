@@ -32,6 +32,9 @@ router.post('/salvar', upload.single('foto'), async (req, res) => {
         stream.end(req.file.buffer);
       });
       editData.fotoURL = result.secure_url;
+
+      // **Salvar o publicId junto para deletar depois**
+      editData.publicId = result.public_id;
     }
 
     const { headers, rows } = lerPlanilha();
@@ -42,7 +45,17 @@ router.post('/salvar', upload.single('foto'), async (req, res) => {
     const rowIndex = rows.findIndex(row => row[indiceTag] === tagEditada);
     if (rowIndex === -1) throw new Error('Tag não encontrada na planilha');
 
+    // Aqui também pega índice da coluna publicId, adiciona se não existir
+    let indicePublicId = headers.findIndex(h => h.toLowerCase() === 'publicid');
+    if (indicePublicId === -1) {
+      headers.push('publicId');
+      rows.forEach(row => row.push(''));
+      indicePublicId = headers.length - 1;
+    }
+
+    // Atualiza a linha com novos dados, inclusive publicId
     const novaLinha = headers.map(h => editData[h] ?? '');
+
     rows[rowIndex] = novaLinha;
 
     salvarPlanilha(headers, rows);
@@ -73,23 +86,19 @@ router.delete('/foto/:tag', async (req, res) => {
       return res.status(400).json({ message: 'Coluna fotoURL não encontrada na planilha' });
     }
 
-    const urlFoto = rows[rowIndex][indiceFoto];
+    // **Usar o publicId salvo na planilha, não extrair da URL**
+    const indicePublicId = headers.findIndex(h => h.toLowerCase() === 'publicid');
+    const publicId = indicePublicId !== -1 ? rows[rowIndex][indicePublicId] : null;
 
-    if (urlFoto) {
-      // Extrai public_id da url para deletar do Cloudinary
-      // Exemplo de url: https://res.cloudinary.com/<cloud_name>/image/upload/v1234567/folder/filename.png
-      // public_id é 'folder/filename' (sem extensão)
-      const urlParts = urlFoto.split('/');
-      const lastPart = urlParts[urlParts.length - 1]; // filename.png
-      const folderPart = urlParts[urlParts.length - 2]; // folder
-      const publicIdWithExt = `${folderPart}/${lastPart}`;
-      const publicId = publicIdWithExt.replace(/\.[^/.]+$/, ""); // remove extensão
-
+    if (publicId) {
       await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
     }
 
-    // Remove a URL da planilha
+    // Remove a URL e publicId da planilha (limpa ambas)
     rows[rowIndex][indiceFoto] = '';
+    if (indicePublicId !== -1) {
+      rows[rowIndex][indicePublicId] = '';
+    }
 
     salvarPlanilha(headers, rows);
 
@@ -99,6 +108,5 @@ router.delete('/foto/:tag', async (req, res) => {
     return res.status(500).json({ message: 'Erro ao deletar foto' });
   }
 });
-
 
 module.exports = router;

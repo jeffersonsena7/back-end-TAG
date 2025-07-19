@@ -13,8 +13,8 @@ function lerPlanilha() {
 function salvarPlanilha(editData) {
   const { workbook, data, filePath } = lerPlanilha();
 
-  const headers = data[0];
-  const rows = data.slice(1);
+  let headers = data[0];
+  let rows = data.slice(1);
 
   const indiceTag = headers.findIndex(h => ['tag', 'TAG', 'Tag'].includes(h));
   if (indiceTag === -1) throw new Error('Coluna Tag não encontrada');
@@ -23,7 +23,20 @@ function salvarPlanilha(editData) {
   const rowIndex = rows.findIndex(row => row[indiceTag] === tagEditada);
   if (rowIndex === -1) throw new Error('Tag não encontrada na planilha');
 
-  const novaLinha = headers.map(h => editData[h] ?? '');
+  // Garantir que a coluna publicId exista
+  let indicePublicId = headers.findIndex(h => h.toLowerCase() === 'publicid');
+  if (indicePublicId === -1) {
+    headers.push('publicId');
+    // Adiciona uma célula vazia para cada linha para a nova coluna
+    rows = rows.map(row => [...row, '']);
+    indicePublicId = headers.length - 1;
+  }
+
+  // Montar a nova linha, incluindo o publicId do editData (se existir)
+  const novaLinha = headers.map(h => {
+    if (h === 'publicId') return editData.publicId ?? rows[rowIndex][indicePublicId];
+    return editData[h] ?? '';
+  });
 
   rows[rowIndex] = novaLinha;
 
