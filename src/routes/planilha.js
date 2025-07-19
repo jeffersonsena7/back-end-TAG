@@ -19,7 +19,6 @@ router.post('/salvar', upload.single('foto'), async (req, res) => {
   try {
     const editData = req.body;
 
-    // Se houver um arquivo, faça o upload para o Cloudinary
     if (req.file) {
       const result = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
@@ -32,8 +31,6 @@ router.post('/salvar', upload.single('foto'), async (req, res) => {
         stream.end(req.file.buffer);
       });
       editData.fotoURL = result.secure_url;
-
-      // **Salvar o publicId junto para deletar depois**
       editData.publicId = result.public_id;
     }
 
@@ -45,7 +42,6 @@ router.post('/salvar', upload.single('foto'), async (req, res) => {
     const rowIndex = rows.findIndex(row => row[indiceTag] === tagEditada);
     if (rowIndex === -1) throw new Error('Tag não encontrada na planilha');
 
-    // Aqui também pega índice da coluna publicId, adiciona se não existir
     let indicePublicId = headers.findIndex(h => h.toLowerCase() === 'publicid');
     if (indicePublicId === -1) {
       headers.push('publicId');
@@ -53,9 +49,7 @@ router.post('/salvar', upload.single('foto'), async (req, res) => {
       indicePublicId = headers.length - 1;
     }
 
-    // Atualiza a linha com novos dados, inclusive publicId
     const novaLinha = headers.map(h => editData[h] ?? '');
-
     rows[rowIndex] = novaLinha;
 
     salvarPlanilha(headers, rows);
@@ -72,7 +66,6 @@ router.delete('/foto/:tag', async (req, res) => {
     const tag = req.params.tag;
     if (!tag) return res.status(400).json({ message: 'Tag é obrigatória' });
 
-    // Ler planilha para achar foto da tag
     const { headers, rows } = lerPlanilha();
 
     const indiceTag = headers.findIndex(h => ['tag', 'TAG', 'Tag'].includes(h));
@@ -86,15 +79,15 @@ router.delete('/foto/:tag', async (req, res) => {
       return res.status(400).json({ message: 'Coluna fotoURL não encontrada na planilha' });
     }
 
-    // **Usar o publicId salvo na planilha, não extrair da URL**
     const indicePublicId = headers.findIndex(h => h.toLowerCase() === 'publicid');
     const publicId = indicePublicId !== -1 ? rows[rowIndex][indicePublicId] : null;
+
+    console.log('PublicId extraído da planilha:', publicId);
 
     if (publicId) {
       await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
     }
 
-    // Remove a URL e publicId da planilha (limpa ambas)
     rows[rowIndex][indiceFoto] = '';
     if (indicePublicId !== -1) {
       rows[rowIndex][indicePublicId] = '';
